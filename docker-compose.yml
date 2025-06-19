@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - PORT=8080
+    networks:
+      - band-network
+    expose:
+      - "8080"
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=band_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - band-network
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - band-network
+
+volumes:
+  postgres_data:
+
+networks:
+  band-network:
