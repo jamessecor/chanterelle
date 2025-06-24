@@ -6,6 +6,7 @@ import {
   TextField,
   Typography,
   Alert,
+  InputAdornment,
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,9 +20,6 @@ const contactSchema = z.object({
   email: z.string()
     .email('Email must be valid')
     .min(1, 'Email is required'),
-  phone: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(20, 'Phone number must be at most 20 digits'),
   message: z.string()
     .max(500, 'Message must be at most 500 characters')
     .optional(),
@@ -43,7 +41,6 @@ const ContactForm = () => {
     defaultValues: {
       name: '',
       email: '',
-      phone: '',
       message: '',
     },
   });
@@ -104,16 +101,6 @@ const ContactForm = () => {
             {...register('email')}
             error={!!errors.email}
             helperText={errors.email?.message}
-            sx={{ mb: 2 }}
-          />
-
-          <TextField
-            fullWidth
-            id="phone"
-            label="Phone Number"
-            {...register('phone')}
-            error={!!errors.phone}
-            helperText={errors.phone?.message}
             sx={{ mb: 2 }}
           />
 

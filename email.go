@@ -69,12 +69,10 @@ func SendContactEmail(contact Contact) error {
 	body := fmt.Sprintf(`
 	Name: %s
 	Email: %s
-	Phone: %s
 	Message: %s
 	`,
 		contact.Name,
 		contact.Email,
-		contact.Phone,
 		contact.Message,
 	)
 

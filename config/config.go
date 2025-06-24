@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -56,7 +55,6 @@ func LoadConfig() error {
 		if value == "" {
 			return fmt.Errorf("required environment variable %s is not set", key)
 		}
-		log.Printf("Loaded %s: %s", key, value)
 	}
 
 	return nil
