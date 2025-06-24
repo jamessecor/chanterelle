@@ -66,15 +66,21 @@ const ContactForm = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           Contact Us
         </Typography>
-        
+
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }}>
+          <Alert
+            onClose={() => setSuccess(false)}
+            severity="success" sx={{ mb: 2 }}
+          >
             Your message has been sent successfully!
           </Alert>
         )}
-        
+
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert
+            onClose={() => setError('')}
+            severity="error" sx={{ mb: 2 }}
+          >
             {error}
           </Alert>
         )}
@@ -89,7 +95,7 @@ const ContactForm = () => {
             helperText={errors.name?.message}
             sx={{ mb: 2 }}
           />
-          
+
           <TextField
             fullWidth
             id="email"
@@ -100,7 +106,7 @@ const ContactForm = () => {
             helperText={errors.email?.message}
             sx={{ mb: 2 }}
           />
-          
+
           <TextField
             fullWidth
             id="phone"
@@ -110,7 +116,7 @@ const ContactForm = () => {
             helperText={errors.phone?.message}
             sx={{ mb: 2 }}
           />
-          
+
           <TextField
             fullWidth
             id="message"
@@ -122,7 +128,7 @@ const ContactForm = () => {
             helperText={errors.message?.message}
             sx={{ mb: 2 }}
           />
-          
+
           <Button
             type="submit"
             variant="contained"

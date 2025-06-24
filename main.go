@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/jamessecor/chanterelle/config"
 	_ "github.com/lib/pq"
 )
 
@@ -24,9 +26,20 @@ type Contact struct {
 var validate *validator.Validate
 
 func main() {
+	// Load configuration
+	if err := config.LoadConfig(); err != nil {
+		// log.Fatal(err)
+	}
+
 	validate = validator.New()
 
-	dsn := "postgresql://postgres:postgres@db:5432/band_db?sslmode=disable"
+	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		config.Config.DBUser,
+		config.Config.DBPassword,
+		config.Config.DBHost,
+		config.Config.DBPort,
+		config.Config.DBName,
+	)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatal(err)
@@ -103,6 +116,7 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{"message": "Contact submitted successfully"})
 		})
 
+		// TODO: authentication
 		api.GET("/contacts", func(c *gin.Context) {
 			rows, err := db.Query("SELECT id, name, email, phone, message, created_at FROM contacts")
 			if err != nil {
@@ -128,6 +142,15 @@ func main() {
 
 			c.JSON(http.StatusOK, gin.H{"contacts": contacts})
 		})
+
+		api.GET("send-email", func(c *gin.Context) {
+			if err := SendMail("james.secor@gmail.com", "Test", "This is a test email"); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"message": "Email sent successfully"})
+		})
+
 		api.GET("/health", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 		})

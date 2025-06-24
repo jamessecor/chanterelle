@@ -9,6 +9,10 @@ services:
       - db
     environment:
       - PORT=8080
+    env_file:
+      - .env
+    volumes:
+      - ./.env:/app/.env
     networks:
       - band-network
     expose:
