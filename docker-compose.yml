@@ -21,13 +21,31 @@ services:
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=band_db
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_HOST_AUTH_METHOD=md5
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - chanterelle_db_data:/var/lib/postgresql/data
     networks:
       - band-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    ports:
+      - "5432:5432"  # Expose for backup/monitoring tools
+    command: postgres -c max_connections=100 -c shared_buffers=256MB -c effective_cache_size=768MB
 
   frontend:
     build: ./frontend
@@ -39,7 +57,7 @@ services:
       - band-network
 
 volumes:
-  postgres_data:
+  chanterelle_db_data:
 
 networks:
   band-network:

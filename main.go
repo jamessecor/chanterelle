@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/jamessecor/chanterelle/config"
+	"github.com/jamessecor/chanterelle/models"
 	_ "github.com/lib/pq"
 )
 
@@ -62,6 +66,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Create verification codes table if it doesn't exist
+	if err := models.CreateVerificationTable(db); err != nil {
+		log.Fatal(err)
+	}
+
 	r := gin.Default()
 
 	// Add CORS middleware
@@ -87,6 +96,147 @@ func main() {
 	// API routes
 	api := r.Group("/api")
 	{
+		// Authentication endpoints
+		api.POST("/send-verification", func(c *gin.Context) {
+			var req struct {
+				PhoneNumber string `json:"phone_number" validate:"required,e164"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			if err := validate.Struct(req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// Generate verification code
+			code := models.GenerateVerificationCode(req.PhoneNumber)
+
+			// Create verification record
+			expiresAt := time.Now().Add(5 * time.Minute)
+			verification := models.VerificationCode{
+				PhoneNumber: req.PhoneNumber,
+				Code:        code,
+				ExpiresAt:   expiresAt,
+			}
+
+			// Insert into database
+			stmt, err := db.Prepare(`
+				INSERT INTO verification_codes (phone_number, code, expires_at)
+				VALUES ($1, $2, $3)
+				RETURNING id
+			`)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
+				return
+			}
+			defer stmt.Close()
+
+			var id int
+			if err := stmt.QueryRow(verification.PhoneNumber, verification.Code, verification.ExpiresAt).Scan(&id); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store verification code"})
+				return
+			}
+
+			// Send SMS using Twilio REST API
+			twilioUrl := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", config.Config.TwilioSID)
+			data := url.Values{}
+			data.Add("To", fmt.Sprintf("whatsapp:%s", req.PhoneNumber))
+			data.Add("From", config.Config.TwilioNumber)
+			data.Add("ContentSid", config.Config.TwilioContentSid)
+			data.Add("ContentVariables", fmt.Sprintf("{\"1\": \"%s\"}", code))
+
+			client := &http.Client{}
+			twilioReq, err := http.NewRequest("POST", twilioUrl, strings.NewReader(data.Encode()))
+			log.Printf("data: %v\n%v", data, data.Encode())
+			log.Printf("Twilio request: %v", twilioReq)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+				return
+			}
+
+			twilioReq.SetBasicAuth(config.Config.TwilioSID, config.Config.TwilioToken)
+			twilioReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			resp, err := client.Do(twilioReq)
+			log.Printf("Twilio response: %v", resp)
+			if err != nil {
+				log.Printf("Failed to send verification code: %v", err)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send verification code"})
+				return
+			}
+
+			defer resp.Body.Close()
+			if resp.StatusCode != http.StatusCreated {
+				log.Printf("Failed to send verification code: %v", resp.StatusCode)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send verification code"})
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{"message": "Verification code sent successfully"})
+		})
+
+		api.POST("/verify-code", func(c *gin.Context) {
+			var req struct {
+				PhoneNumber string `json:"phone_number" validate:"required,e164"`
+				Code        string `json:"code" validate:"required,len=6"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			if err := validate.Struct(req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// Check if code is valid
+			var verification models.VerificationCode
+			err := db.QueryRow(`
+				SELECT id, phone_number, code, expires_at 
+				FROM verification_codes 
+				WHERE phone_number = $1 AND code = $2 
+				AND expires_at > NOW()
+			`, req.PhoneNumber, req.Code).Scan(
+				&verification.ID,
+				&verification.PhoneNumber,
+				&verification.Code,
+				&verification.ExpiresAt,
+			)
+
+			if err != nil {
+				if err == sql.ErrNoRows {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired verification code"})
+				} else {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify code"})
+				}
+				return
+			}
+
+			// Generate JWT token
+			claims := jwt.MapClaims{}
+			claims["phone_number"] = req.PhoneNumber
+			claims["exp"] = time.Now().Add(24 * time.Hour).Unix()
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+			tokenString, err := token.SignedString([]byte(config.Config.JWTSecret))
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+				return
+			}
+
+			// Delete used verification code
+			_, err = db.Exec("DELETE FROM verification_codes WHERE id = $1", verification.ID)
+			if err != nil {
+				log.Printf("Failed to delete verification code: %v", err)
+			}
+
+			c.JSON(http.StatusOK, gin.H{"token": tokenString})
+		})
+
 		api.POST("/contact", func(c *gin.Context) {
 			var contact Contact
 			if err := c.ShouldBindJSON(&contact); err != nil {
@@ -113,8 +263,27 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{"message": "Contact submitted successfully"})
 		})
 
-		// TODO: authentication
 		api.GET("/contacts", func(c *gin.Context) {
+			tokenString := c.GetHeader("Authorization")
+			if tokenString == "" {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
+				return
+			}
+			tokenString = tokenString[7:]
+			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+				}
+				return []byte(config.Config.JWTSecret), nil
+			})
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+				return
+			}
+			if !token.Valid {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+				return
+			}
 			rows, err := db.Query("SELECT id, name, email, message, created_at FROM contacts")
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -140,12 +309,13 @@ func main() {
 			c.JSON(http.StatusOK, gin.H{"contacts": contacts})
 		})
 
-		api.GET("send-email", func(c *gin.Context) {
-			if err := SendMail("james.secor@gmail.com", "Test", "This is a test email"); err != nil {
+		api.DELETE("/contacts", func(c *gin.Context) {
+			_, err := db.Exec("DELETE FROM contacts")
+			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 				return
 			}
-			c.JSON(http.StatusOK, gin.H{"message": "Email sent successfully"})
+			c.JSON(http.StatusOK, gin.H{"message": "Contacts deleted successfully"})
 		})
 
 		api.GET("/health", func(c *gin.Context) {

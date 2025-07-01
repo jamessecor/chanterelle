@@ -9,40 +9,44 @@ import (
 
 // Config holds application configuration
 var Config struct {
-	EmailJSUserID     string
-	EmailJSTemplate   string
-	EmailJSPublicKey  string
-	EmailJSPrivateKey string
-	DBHost            string
-	DBPort            string
-	DBUser            string
-	DBPassword        string
-	DBName            string
+	DBHost           string
+	DBPort           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	TwilioSID        string
+	TwilioToken      string
+	TwilioNumber     string
+	TwilioContentSid string
+	JWTSecret        string
 }
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() error {
 	// Load .env file
-	if err := godotenv.Load("/app/.env"); err != nil {
+	if err := godotenv.Load(".env"); err != nil {
 		return fmt.Errorf("error loading .env file: %v", err)
 	}
 
 	// Load config values from environment variables
-	Config.EmailJSUserID = os.Getenv("EMAILJS_USER_ID")
-	Config.EmailJSTemplate = os.Getenv("EMAILJS_TEMPLATE")
-	Config.EmailJSPublicKey = os.Getenv("EMAILJS_PUBLIC_KEY")
-	Config.EmailJSPrivateKey = os.Getenv("EMAILJS_PRIVATE_KEY")
 	Config.DBHost = os.Getenv("DB_HOST")
 	Config.DBPort = os.Getenv("DB_PORT")
 	Config.DBUser = os.Getenv("DB_USER")
 	Config.DBPassword = os.Getenv("DB_PASSWORD")
 	Config.DBName = os.Getenv("DB_NAME")
+	Config.TwilioSID = os.Getenv("TWILIO_SID")
+	Config.TwilioToken = os.Getenv("TWILIO_TOKEN")
+	Config.TwilioNumber = os.Getenv("TWILIO_NUMBER")
+	Config.TwilioContentSid = os.Getenv("TWILIO_CONTENT_SID")
+	Config.JWTSecret = os.Getenv("JWT_SECRET")
 
 	// Validate required config values
 	required := []string{
-		"EMAILJS_USER_ID",
-		"EMAILJS_TEMPLATE",
-		"EMAILJS_PRIVATE_KEY",
+		"TWILIO_SID",
+		"TWILIO_TOKEN",
+		"TWILIO_NUMBER",
+		"TWILIO_CONTENT_SID",
+		"JWT_SECRET",
 		"DB_HOST",
 		"DB_PORT",
 		"DB_USER",
