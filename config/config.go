@@ -19,6 +19,7 @@ var Config struct {
 	TwilioNumber     string
 	TwilioContentSid string
 	JWTSecret        string
+	AdminPhoneNumber string
 }
 
 // LoadConfig loads configuration from environment variables
@@ -39,6 +40,7 @@ func LoadConfig() error {
 	Config.TwilioNumber = os.Getenv("TWILIO_NUMBER")
 	Config.TwilioContentSid = os.Getenv("TWILIO_CONTENT_SID")
 	Config.JWTSecret = os.Getenv("JWT_SECRET")
+	Config.AdminPhoneNumber = os.Getenv("ADMIN_PHONE_NUMBER")
 
 	// Validate required config values
 	required := []string{
@@ -47,6 +49,7 @@ func LoadConfig() error {
 		"TWILIO_NUMBER",
 		"TWILIO_CONTENT_SID",
 		"JWT_SECRET",
+		"ADMIN_PHONE_NUMBER",
 		"DB_HOST",
 		"DB_PORT",
 		"DB_USER",

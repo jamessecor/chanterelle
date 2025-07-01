@@ -45,11 +45,23 @@ func main() {
 	)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Failed to open database connection: %v", err)
 	}
-	err = db.Ping()
-	if err != nil {
-		log.Fatal(err)
+
+	// Retry database connection with exponential backoff
+	maxRetries := 10
+	retryDelay := 1 * time.Second
+	for i := 0; i < maxRetries; i++ {
+		err = db.Ping()
+		if err == nil {
+			break
+		}
+		log.Printf("Database connection attempt %d failed: %v", i+1, err)
+		if i == maxRetries-1 {
+			log.Fatalf("Failed to connect to database after %d attempts", maxRetries)
+		}
+		time.Sleep(retryDelay)
+		retryDelay *= 2 // Exponential backoff
 	}
 
 	// Create contacts table if it doesn't exist
@@ -99,7 +111,7 @@ func main() {
 		// Authentication endpoints
 		api.POST("/send-verification", func(c *gin.Context) {
 			var req struct {
-				PhoneNumber string `json:"phone_number" validate:"required,e164"`
+				PhoneNumber string `json:"phoneNumber" validate:"required,e164"`
 			}
 			if err := c.ShouldBindJSON(&req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -108,6 +120,12 @@ func main() {
 
 			if err := validate.Struct(req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// Validate phone number is in E.164 format and starts with +1
+			if !strings.HasPrefix(req.PhoneNumber, "+1") || len(req.PhoneNumber) != 12 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format. Must be in E.164 format (e.g., +18025551234)"})
 				return
 			}
 
@@ -136,7 +154,7 @@ func main() {
 
 			var id int
 			if err := stmt.QueryRow(verification.PhoneNumber, verification.Code, verification.ExpiresAt).Scan(&id); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store verification code"})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to store verification code: %v", err)})
 				return
 			}
 
@@ -180,7 +198,7 @@ func main() {
 
 		api.POST("/verify-code", func(c *gin.Context) {
 			var req struct {
-				PhoneNumber string `json:"phone_number" validate:"required,e164"`
+				PhoneNumber string `json:"phoneNumber" validate:"required,e164"`
 				Code        string `json:"code" validate:"required,len=6"`
 			}
 			if err := c.ShouldBindJSON(&req); err != nil {
@@ -190,6 +208,12 @@ func main() {
 
 			if err := validate.Struct(req); err != nil {
 				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+
+			// Validate phone number is in E.164 format and starts with +1
+			if !strings.HasPrefix(req.PhoneNumber, "+1") || len(req.PhoneNumber) != 12 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format. Must be in E.164 format (e.g., +18025551234)"})
 				return
 			}
 
