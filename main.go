@@ -1,20 +1,24 @@
 package main
 
 import (
+	"chanterelle/internal/handlers"
+	"chanterelle/internal/repositories"
+	"chanterelle/internal/services"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
-	"strings"
+	"os/signal"
+	"syscall"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	"chanterelle/internal/config"
+
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
-	"github.com/jamessecor/chanterelle/config"
-	"github.com/jamessecor/chanterelle/models"
 	_ "github.com/lib/pq"
 )
 
@@ -30,19 +34,15 @@ var validate *validator.Validate
 
 func main() {
 	// Load configuration
-	if err := config.LoadConfig(); err != nil {
-		// log.Fatal(err)
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	validate = validator.New()
 
 	dsn := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		config.Config.DBUser,
-		config.Config.DBPassword,
-		config.Config.DBHost,
-		config.Config.DBPort,
-		config.Config.DBName,
-	)
+		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName)
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		log.Fatalf("Failed to open database connection: %v", err)
@@ -78,280 +78,81 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Create verification codes table if it doesn't exist
-	if err := models.CreateVerificationTable(db); err != nil {
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS verification_codes (
+			id SERIAL PRIMARY KEY,
+			phone_number VARCHAR(20) NOT NULL,
+			code VARCHAR(6) NOT NULL,
+			expires_at TIMESTAMP NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
 		log.Fatal(err)
 	}
 
+	// Initialize repositories
+	contactRepo := repositories.NewContactRepository(db)
+	verificationRepo := repositories.NewVerificationCodeRepository(db)
+
+	// Initialize services
+	contactService := services.NewContactService(contactRepo)
+	verificationService := services.NewVerificationService(cfg, verificationRepo)
+
+	// Initialize handlers
+	contactHandler := handlers.NewContactHandler(contactService)
+	verificationHandler := handlers.NewVerificationHandler(verificationService, cfg)
+
+	// Initialize Gin router
 	r := gin.Default()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
-	// Add CORS middleware
-	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	})
-
-	// Frontend routes
-	r.Static("/index", "./frontend/dist")
-
-	// Handle all other non-API routes
-	r.GET("/!api/*path", func(c *gin.Context) {
-		c.File("./frontend/dist/index.html")
-	})
-
-	// API routes
+	// Protected routes
 	api := r.Group("/api")
-	{
-		// Authentication endpoints
-		api.POST("/send-verification", func(c *gin.Context) {
-			var req struct {
-				PhoneNumber string `json:"phoneNumber" validate:"required,e164"`
-			}
-			if err := c.ShouldBindJSON(&req); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
+	// Authentication endpoints
+	api.POST("/send-verification", verificationHandler.SendVerification)
+	api.POST("/verify-code", verificationHandler.VerifyCode)
 
-			if err := validate.Struct(req); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
+	// Protected routes
+	api.Use(verificationHandler.JWTAuth())
 
-			// Validate phone number is in E.164 format and starts with +1
-			if !strings.HasPrefix(req.PhoneNumber, "+1") || len(req.PhoneNumber) != 12 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format. Must be in E.164 format (e.g., +18025551234)"})
-				return
-			}
+	// Get all contacts
+	api.GET("/contacts", contactHandler.GetContacts)
 
-			// Generate verification code
-			code := models.GenerateVerificationCode(req.PhoneNumber)
-
-			// Create verification record
-			expiresAt := time.Now().Add(5 * time.Minute)
-			verification := models.VerificationCode{
-				PhoneNumber: req.PhoneNumber,
-				Code:        code,
-				ExpiresAt:   expiresAt,
-			}
-
-			// Insert into database
-			stmt, err := db.Prepare(`
-				INSERT INTO verification_codes (phone_number, code, expires_at)
-				VALUES ($1, $2, $3)
-				RETURNING id
-			`)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create verification code"})
-				return
-			}
-			defer stmt.Close()
-
-			var id int
-			if err := stmt.QueryRow(verification.PhoneNumber, verification.Code, verification.ExpiresAt).Scan(&id); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to store verification code: %v", err)})
-				return
-			}
-
-			// Send SMS using Twilio REST API
-			twilioUrl := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", config.Config.TwilioSID)
-			data := url.Values{}
-			data.Add("To", fmt.Sprintf("whatsapp:%s", req.PhoneNumber))
-			data.Add("From", config.Config.TwilioNumber)
-			data.Add("ContentSid", config.Config.TwilioContentSid)
-			data.Add("ContentVariables", fmt.Sprintf("{\"1\": \"%s\"}", code))
-
-			client := &http.Client{}
-			twilioReq, err := http.NewRequest("POST", twilioUrl, strings.NewReader(data.Encode()))
-			log.Printf("data: %v\n%v", data, data.Encode())
-			log.Printf("Twilio request: %v", twilioReq)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
-				return
-			}
-
-			twilioReq.SetBasicAuth(config.Config.TwilioSID, config.Config.TwilioToken)
-			twilioReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-			resp, err := client.Do(twilioReq)
-			log.Printf("Twilio response: %v", resp)
-			if err != nil {
-				log.Printf("Failed to send verification code: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send verification code"})
-				return
-			}
-
-			defer resp.Body.Close()
-			if resp.StatusCode != http.StatusCreated {
-				log.Printf("Failed to send verification code: %v", resp.StatusCode)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send verification code"})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{"message": "Verification code sent successfully"})
-		})
-
-		api.POST("/verify-code", func(c *gin.Context) {
-			var req struct {
-				PhoneNumber string `json:"phoneNumber" validate:"required,e164"`
-				Code        string `json:"code" validate:"required,len=6"`
-			}
-			if err := c.ShouldBindJSON(&req); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-
-			if err := validate.Struct(req); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-
-			// Validate phone number is in E.164 format and starts with +1
-			if !strings.HasPrefix(req.PhoneNumber, "+1") || len(req.PhoneNumber) != 12 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format. Must be in E.164 format (e.g., +18025551234)"})
-				return
-			}
-
-			// Check if code is valid
-			var verification models.VerificationCode
-			err := db.QueryRow(`
-				SELECT id, phone_number, code, expires_at 
-				FROM verification_codes 
-				WHERE phone_number = $1 AND code = $2 
-				AND expires_at > NOW()
-			`, req.PhoneNumber, req.Code).Scan(
-				&verification.ID,
-				&verification.PhoneNumber,
-				&verification.Code,
-				&verification.ExpiresAt,
-			)
-
-			if err != nil {
-				if err == sql.ErrNoRows {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired verification code"})
-				} else {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify code"})
-				}
-				return
-			}
-
-			// Generate JWT token
-			claims := jwt.MapClaims{}
-			claims["phone_number"] = req.PhoneNumber
-			claims["exp"] = time.Now().Add(24 * time.Hour).Unix()
-			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-			tokenString, err := token.SignedString([]byte(config.Config.JWTSecret))
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
-				return
-			}
-
-			// Delete used verification code
-			_, err = db.Exec("DELETE FROM verification_codes WHERE id = $1", verification.ID)
-			if err != nil {
-				log.Printf("Failed to delete verification code: %v", err)
-			}
-
-			c.JSON(http.StatusOK, gin.H{"token": tokenString})
-		})
-
-		api.POST("/contact", func(c *gin.Context) {
-			var contact Contact
-			if err := c.ShouldBindJSON(&contact); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-
-			if err := validate.Struct(contact); err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-				return
-			}
-
-			_, err := db.Exec(
-				"INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3)",
-				contact.Name,
-				contact.Email,
-				contact.Message,
-			)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{"message": "Contact submitted successfully"})
-		})
-
-		api.GET("/contacts", func(c *gin.Context) {
-			tokenString := c.GetHeader("Authorization")
-			if tokenString == "" {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing token"})
-				return
-			}
-			tokenString = tokenString[7:]
-			token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-				}
-				return []byte(config.Config.JWTSecret), nil
-			})
-			if err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-				return
-			}
-			if !token.Valid {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
-				return
-			}
-			rows, err := db.Query("SELECT id, name, email, message, created_at FROM contacts")
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			defer rows.Close()
-
-			var contacts []Contact
-			for rows.Next() {
-				var contact Contact
-				if err := rows.Scan(&contact.ID, &contact.Name, &contact.Email, &contact.Message, &contact.CreatedAt); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-					return
-				}
-				contacts = append(contacts, contact)
-			}
-
-			if err := rows.Err(); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{"contacts": contacts})
-		})
-
-		api.DELETE("/contacts", func(c *gin.Context) {
-			_, err := db.Exec("DELETE FROM contacts")
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"message": "Contacts deleted successfully"})
-		})
-
-		api.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"status": "healthy"})
-		})
+	// Start server
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: r,
 	}
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	// Graceful shutdown
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal("Server failed to start:", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	// Shutdown server gracefully
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatal("Server shutdown failed:", err)
 	}
 
-	log.Printf("Server running on port %s", port)
-	r.Run(":" + port)
+	log.Println("Server shutdown gracefully")
 }
