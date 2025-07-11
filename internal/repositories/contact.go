@@ -49,13 +49,18 @@ func (r *ContactRepository) GetAll() ([]*models.Contact, error) {
 }
 
 func (r *ContactRepository) Create(contact *models.Contact) (*models.Contact, error) {
-	_, err := r.db.Exec(`
+	var id int
+	row := r.db.QueryRow(`
 		INSERT INTO contacts (name, email, message)
 		VALUES ($1, $2, $3)
+		RETURNING id
 	`, contact.Name, contact.Email, contact.Message)
+
+	err := row.Scan(&id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to insert contact")
 	}
 
+	contact.ID = id
 	return contact, nil
 }
