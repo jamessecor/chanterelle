@@ -4,9 +4,9 @@ import "time"
 
 type Contact struct {
 	ID        int       `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	Message   string    `json:"message"`
+	Name      string    `json:"name" validate:"required,min=2,max=100"`
+	Email     string    `json:"email" validate:"required,email"`
+	Message   string    `json:"message" validate:"max=500"`
 	CreatedAt time.Time `json:"created_at"`
 }
 

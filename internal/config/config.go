@@ -30,8 +30,8 @@ type Config struct {
 	DBName     string
 	JWTSecret  string
 
-	TwilioSID                  string
-	TwilioToken                string
+	TwilioAccountSID           string
+	TwilioAuthToken            string
 	TwilioNumber               string
 	TwilioContentSID           string
 	AvailableAdminPhoneNumbers []string
@@ -50,8 +50,8 @@ func LoadConfig() (*Config, error) {
 		DBName:     os.Getenv("DB_NAME"),
 		JWTSecret:  os.Getenv("JWT_SECRET"),
 
-		TwilioSID:                  os.Getenv("TWILIO_SID"),
-		TwilioToken:                os.Getenv("TWILIO_TOKEN"),
+		TwilioAccountSID:           os.Getenv("TWILIO_ACCOUNT_SID"),
+		TwilioAuthToken:            os.Getenv("TWILIO_AUTH_TOKEN"),
 		TwilioNumber:               os.Getenv("TWILIO_NUMBER"),
 		TwilioContentSID:           os.Getenv("TWILIO_CONTENT_SID"),
 		AvailableAdminPhoneNumbers: strings.Split(os.Getenv("AVAILABLE_ADMIN_PHONE_NUMBERS"), ","),
@@ -65,8 +65,8 @@ func LoadConfig() (*Config, error) {
 		"DB_PASSWORD",
 		"DB_NAME",
 		"JWT_SECRET",
-		"TWILIO_SID",
-		"TWILIO_TOKEN",
+		"TWILIO_ACCOUNT_SID",
+		"TWILIO_AUTH_TOKEN",
 		"TWILIO_NUMBER",
 		"TWILIO_CONTENT_SID",
 		"AVAILABLE_ADMIN_PHONE_NUMBERS",

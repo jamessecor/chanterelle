@@ -22,14 +22,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Contact struct {
-	ID        int       `json:"id"`
-	Name      string    `json:"name" validate:"required,min=2,max=100"`
-	Email     string    `json:"email" validate:"required,email"`
-	Message   string    `json:"message" validate:"max=500"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
 var validate *validator.Validate
 
 func main() {
@@ -116,8 +108,10 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Protected routes
+	// Public routes
 	api := r.Group("/api")
+	// Contact creation (public)
+	api.POST("/contact", contactHandler.CreateContact)
 	// Authentication endpoints
 	api.POST("/send-verification", verificationHandler.SendVerification)
 	api.POST("/verify-code", verificationHandler.VerifyCode)

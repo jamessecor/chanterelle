@@ -1,9 +1,10 @@
 package repositories
 
 import (
-	"database/sql"
-	"github.com/pkg/errors"
 	"chanterelle/internal/models"
+	"database/sql"
+
+	"github.com/pkg/errors"
 )
 
 type ContactRepository struct {
@@ -45,4 +46,16 @@ func (r *ContactRepository) GetAll() ([]*models.Contact, error) {
 	}
 
 	return contacts, nil
+}
+
+func (r *ContactRepository) Create(contact *models.Contact) (*models.Contact, error) {
+	_, err := r.db.Exec(`
+		INSERT INTO contacts (name, email, message)
+		VALUES ($1, $2, $3)
+	`, contact.Name, contact.Email, contact.Message)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to insert contact")
+	}
+
+	return contact, nil
 }

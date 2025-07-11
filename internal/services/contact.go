@@ -16,3 +16,7 @@ func NewContactService(contactRepo *repositories.ContactRepository) *ContactServ
 func (s *ContactService) GetAll() ([]*models.Contact, error) {
 	return s.contactRepo.GetAll()
 }
+
+func (s *ContactService) Create(contact *models.Contact) (*models.Contact, error) {
+	return s.contactRepo.Create(contact)
+}

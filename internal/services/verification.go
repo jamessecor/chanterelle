@@ -3,11 +3,7 @@ package services
 import (
 	"crypto/rand"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
 	"slices"
-	"strings"
 	"time"
 
 	"chanterelle/internal/config"
@@ -16,6 +12,8 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/pkg/errors"
+	"github.com/twilio/twilio-go"
+	twilio_api "github.com/twilio/twilio-go/rest/api/v2010"
 )
 
 type VerificationService struct {
@@ -79,31 +77,15 @@ func (s *VerificationService) VerifyCode(phoneNumber, code string) (string, erro
 }
 
 func (s *VerificationService) SendVerificationCode(phoneNumber, code string) error {
-	twilioUrl := fmt.Sprintf("https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json", s.config.TwilioSID)
-	data := url.Values{}
-	data.Add("To", fmt.Sprintf("whatsapp:%s", phoneNumber))
-	data.Add("From", s.config.TwilioNumber)
-	data.Add("ContentSid", s.config.TwilioContentSID)
-	data.Add("ContentVariables", fmt.Sprintf("{\"1\": \"%s\"}", code))
+	client := twilio.NewRestClient()
+	params := &twilio_api.CreateMessageParams{}
+	params.SetBody("Your verification code is: " + code)
+	params.SetFrom(s.config.TwilioNumber)
+	params.SetTo(phoneNumber)
 
-	req, err := http.NewRequest("POST", twilioUrl, strings.NewReader(data.Encode()))
+	_, err := client.Api.CreateMessage(params)
 	if err != nil {
-		return errors.Wrap(err, "failed to create request")
-	}
-
-	req.SetBasicAuth(s.config.TwilioSID, s.config.TwilioToken)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "failed to send request")
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		return errors.Errorf("twilio request failed: %s", string(body))
+		return errors.Wrap(err, "failed to send verification code")
 	}
 
 	return nil
