@@ -2,5 +2,7 @@ frontend/node_modules/
 frontend/dist/
 
 .env
+internal/services/.env
+
 go.sum
 go.mod

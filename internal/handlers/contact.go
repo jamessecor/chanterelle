@@ -11,13 +11,13 @@ import (
 )
 
 type ContactHandler struct {
-	contactService     *services.ContactService
+	contactService      *services.ContactService
 	notificationService *services.NotificationService
 }
 
 func NewContactHandler(contactService *services.ContactService, cfg *config.Config) *ContactHandler {
 	return &ContactHandler{
-		contactService:     contactService,
+		contactService:      contactService,
 		notificationService: services.NewNotificationService(cfg),
 	}
 }
@@ -55,10 +55,10 @@ func (h *ContactHandler) CreateContact(c *gin.Context) {
 	}
 
 	// Send admin notification
-	if err := h.notificationService.SendAdminNotification(createdContact); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send admin notification"})
-		return
-	}
+	// if err := h.notificationService.SendAdminNotification(createdContact); err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send admin notification"})
+	// 	return
+	// }
 
 	c.JSON(http.StatusCreated, gin.H{
 		"contact": createdContact,

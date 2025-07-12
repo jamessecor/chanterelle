@@ -47,8 +47,8 @@ const ContactForm = () => {
 
   const onSubmit = async (data: ContactFormInputs) => {
     try {
-      const response = await axios.post('http://localhost:8080/api/contact', data);
-      if (response.status === 200) {
+      const response = await axios.post('http://localhost:8080/api/contacts', data);
+      if (response.status === 201) {
         // TODO: send message that a new contact was added
         // axios.post('http://localhost:8080/api/notify', data);
         setSuccess(response.data.message || 'Your message has been sent successfully!');

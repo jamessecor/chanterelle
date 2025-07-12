@@ -37,9 +37,11 @@ type Config struct {
 	AvailableAdminPhoneNumbers []string
 	MailchimpAPIKey            string
 	MailchimpListID            string
+	AdminEmail                 string
 }
 
 func LoadConfig() (*Config, error) {
+	// Try to load .env from root directory
 	if err := godotenv.Load(".env"); err != nil {
 		return nil, fmt.Errorf("error loading .env file: %v", err)
 	}
@@ -59,6 +61,7 @@ func LoadConfig() (*Config, error) {
 		AvailableAdminPhoneNumbers: strings.Split(os.Getenv("AVAILABLE_ADMIN_PHONE_NUMBERS"), ","),
 		MailchimpAPIKey:            os.Getenv("MAILCHIMP_API_KEY"),
 		MailchimpListID:            os.Getenv("MAILCHIMP_LIST_ID"),
+		AdminEmail:                 os.Getenv("ADMIN_EMAIL"),
 	}
 
 	// Validate required config values
@@ -76,6 +79,7 @@ func LoadConfig() (*Config, error) {
 		"AVAILABLE_ADMIN_PHONE_NUMBERS",
 		"MAILCHIMP_API_KEY",
 		"MAILCHIMP_LIST_ID",
+		"ADMIN_EMAIL",
 	}
 
 	for _, key := range required {
