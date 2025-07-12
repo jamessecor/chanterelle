@@ -92,7 +92,7 @@ func main() {
 	verificationService := services.NewVerificationService(cfg, verificationRepo)
 
 	// Initialize handlers
-	contactHandler := handlers.NewContactHandler(contactService)
+	contactHandler := handlers.NewContactHandler(contactService, cfg)
 	verificationHandler := handlers.NewVerificationHandler(verificationService, cfg)
 
 	// Initialize Gin router
@@ -111,7 +111,7 @@ func main() {
 	// Public routes
 	api := r.Group("/api")
 	// Contact creation (public)
-	api.POST("/contact", contactHandler.CreateContact)
+	api.POST("/contacts", contactHandler.CreateContact)
 	// Authentication endpoints
 	api.POST("/send-verification", verificationHandler.SendVerification)
 	api.POST("/verify-code", verificationHandler.VerifyCode)

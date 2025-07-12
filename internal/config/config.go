@@ -35,6 +35,8 @@ type Config struct {
 	TwilioNumber               string
 	TwilioContentSID           string
 	AvailableAdminPhoneNumbers []string
+	MailchimpAPIKey            string
+	MailchimpListID            string
 }
 
 func LoadConfig() (*Config, error) {
@@ -55,6 +57,8 @@ func LoadConfig() (*Config, error) {
 		TwilioNumber:               os.Getenv("TWILIO_NUMBER"),
 		TwilioContentSID:           os.Getenv("TWILIO_CONTENT_SID"),
 		AvailableAdminPhoneNumbers: strings.Split(os.Getenv("AVAILABLE_ADMIN_PHONE_NUMBERS"), ","),
+		MailchimpAPIKey:            os.Getenv("MAILCHIMP_API_KEY"),
+		MailchimpListID:            os.Getenv("MAILCHIMP_LIST_ID"),
 	}
 
 	// Validate required config values
@@ -70,6 +74,8 @@ func LoadConfig() (*Config, error) {
 		"TWILIO_NUMBER",
 		"TWILIO_CONTENT_SID",
 		"AVAILABLE_ADMIN_PHONE_NUMBERS",
+		"MAILCHIMP_API_KEY",
+		"MAILCHIMP_LIST_ID",
 	}
 
 	for _, key := range required {

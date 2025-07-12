@@ -42,7 +42,7 @@ func (h *VerificationHandler) SendVerification(c *gin.Context) {
 	}
 
 	if !h.verificationService.IsValidAdminPhoneNumber(req.PhoneNumber) {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		c.JSON(http.StatusOK, gin.H{"token": "Unauthorized"})
 		return
 	}
 
