@@ -102,6 +102,8 @@ func generateRandomCode() string {
 		panic(err)
 	}
 
-	code := fmt.Sprintf("%06d", uint32(bytes[0])%1000000)
+	// Convert the first 4 bytes to a uint32 for better distribution
+	randomNum := uint32(bytes[0])<<24 | uint32(bytes[1])<<16 | uint32(bytes[2])<<8 | uint32(bytes[3])
+	code := fmt.Sprintf("%06d", randomNum%1000000)
 	return code
 }
