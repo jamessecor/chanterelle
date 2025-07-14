@@ -32,7 +32,7 @@ const AdminPage = () => {
             Authorization: `Bearer ${token}`
           }
         });
-        setContacts(response.data.contacts);
+        setContacts(response.data.contacts ?? []);
       } catch (error) {
         console.error('Error fetching contacts:', error);
         setError(error.message);

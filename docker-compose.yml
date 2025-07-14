@@ -53,6 +53,8 @@ services:
       - "3000:80"
     environment:
       - NODE_ENV=development
+    expose:
+      - "3000"
     networks:
       - band-network
 
