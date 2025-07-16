@@ -40,6 +40,9 @@ const VerificationPage = () => {
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
+      <Button variant="outlined" color="secondary" onClick={() => navigate('/')}>
+        Exit to Home
+      </Button>
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="h5" component="h1" gutterBottom>
           Verify Your Code
