@@ -11,8 +11,8 @@ type Contact struct {
 }
 
 type VerificationCode struct {
-	ID          int       `json:"id"`
-	PhoneNumber string    `json:"phone_number"`
-	Code        string    `json:"code"`
-	ExpiresAt   time.Time `json:"expires_at"`
+	ID        int       `json:"id"`
+	Email     string    `json:"email"`
+	Code      string    `json:"code"`
+	ExpiresAt time.Time `json:"expires_at"`
 }

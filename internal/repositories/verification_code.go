@@ -1,9 +1,10 @@
 package repositories
 
 import (
-	"database/sql"
-	"github.com/pkg/errors"
 	"chanterelle/internal/models"
+	"database/sql"
+
+	"github.com/pkg/errors"
 )
 
 type VerificationCodeRepository struct {
@@ -16,30 +17,30 @@ func NewVerificationCodeRepository(db *sql.DB) *VerificationCodeRepository {
 
 func (r *VerificationCodeRepository) Create(code *models.VerificationCode) error {
 	_, err := r.db.Exec(`
-		INSERT INTO verification_codes (phone_number, code, expires_at)
+		INSERT INTO verification_codes (email, code, expires_at)
 		VALUES ($1, $2, $3)
-	`, code.PhoneNumber, code.Code, code.ExpiresAt)
+	`, code.Email, code.Code, code.ExpiresAt)
 	if err != nil {
 		return errors.Wrap(err, "failed to create verification code")
 	}
 	return nil
 }
 
-func (r *VerificationCodeRepository) GetByCode(phoneNumber, code string) (*models.VerificationCode, error) {
+func (r *VerificationCodeRepository) GetByCode(email, code string) (*models.VerificationCode, error) {
 	var verificationCode models.VerificationCode
-	
+
 	err := r.db.QueryRow(`
-		SELECT id, phone_number, code, expires_at 
+		SELECT id, email, code, expires_at 
 		FROM verification_codes 
-		WHERE phone_number = $1 AND code = $2 
+		WHERE email = $1 AND code = $2 
 		AND expires_at > NOW()
-	`, phoneNumber, code).Scan(
+	`, email, code).Scan(
 		&verificationCode.ID,
-		&verificationCode.PhoneNumber,
+		&verificationCode.Email,
 		&verificationCode.Code,
 		&verificationCode.ExpiresAt,
 	)
-	
+
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

@@ -5,7 +5,7 @@ import axios from 'axios';
 
 const VerificationPage = () => {
   const navigate = useNavigate();
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState<string>('');
   const [error, setError] = useState('');
 
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -16,15 +16,23 @@ const VerificationPage = () => {
   }, [focusedIndex]);
 
   const handleVerify = async () => {
+    setError('');
+    
+    // Validate code format
+    if (!/^[0-9]{6}$/.test(code)) {
+      setError('Verification code must be 6 digits');
+      return;
+    }
+
     try {
-      const phoneNumber = localStorage.getItem('adminPhoneNumber');
-      if (!phoneNumber) {
-        setError('Phone number not found');
+      const email = localStorage.getItem('adminEmail');
+      if (!email) {
+        setError('Email not found');
         return;
       }
 
       const response = await axios.post('http://localhost:8080/api/verify-code', {
-        phoneNumber,
+        email,
         code: code
       });
 
@@ -38,38 +46,35 @@ const VerificationPage = () => {
     }
   };
 
-  return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Button variant="outlined" color="secondary" onClick={() => navigate('/')}>
-        Exit to Home
-      </Button>
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          Verify Your Code
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 4 }}>
-          Enter the 6-digit verification code sent to your phone
-        </Typography>
-        
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
+  const updateCode = (index: number, value: string) => {
+    const newCode = code.split('');
+    newCode[index] = value;
+    setCode(newCode.join(''));
+  };
 
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          {[...Array(6)].map((_, index) => (
+  return (
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Button variant="contained" color="primary" onClick={() => navigate('/')}>
+          Back to Home
+        </Button>
+        <Typography component="h1" variant="h5">
+          Enter Verification Code
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', mb: 2 }}>
+          If the email was valid, you'll receive a verification code to enter
+        </Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Box sx={{ mt: 4, display: 'flex', gap: 1 }}>
+          {[0, 1, 2, 3, 4, 5].map((index) => (
             <TextField
               key={index}
               id={`code-input-${index}`}
               value={code[index] || ''}
               onChange={(e) => {
-                const newCode = e.target.value;
-                if (newCode.length === 1 && newCode.match(/[0-9]/)) {
-                  setCode(code.substring(0, index) + newCode + code.substring(index + 1));
-                  if (index < 5) {
-                    setFocusedIndex(index + 1);
-                  }
+                updateCode(index, e.target.value);
+                if (e.target.value && index < 5) {
+                  setFocusedIndex(index + 1);
                 }
               }}
               onFocus={() => setFocusedIndex(index)}

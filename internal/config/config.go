@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -23,12 +24,12 @@ func GetConfig() *Config {
 }
 
 type Config struct {
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	JWTSecret  string
+	MongoURI      string
+	MongoDatabase string
+	JWTSecret     string
+
+	VerificationCodeLength int
+	VerificationCodeExpiry time.Duration
 
 	TwilioAccountSID           string
 	TwilioAuthToken            string
@@ -47,30 +48,25 @@ func LoadConfig() (*Config, error) {
 	}
 
 	config := &Config{
-		DBHost:     os.Getenv("DB_HOST"),
-		DBPort:     os.Getenv("DB_PORT"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
-		JWTSecret:  os.Getenv("JWT_SECRET"),
-
-		TwilioAccountSID:           os.Getenv("TWILIO_ACCOUNT_SID"),
-		TwilioAuthToken:            os.Getenv("TWILIO_AUTH_TOKEN"),
-		TwilioNumber:               os.Getenv("TWILIO_NUMBER"),
-		TwilioContentSID:           os.Getenv("TWILIO_CONTENT_SID"),
+		MongoURI:                 os.Getenv("MONGODB_URI"),
+		MongoDatabase:           os.Getenv("MONGODB_DATABASE"),
+		JWTSecret:               os.Getenv("JWT_SECRET"),
+		VerificationCodeLength:  6,
+		VerificationCodeExpiry:  15 * time.Minute,
+		TwilioAccountSID:        os.Getenv("TWILIO_ACCOUNT_SID"),
+		TwilioAuthToken:         os.Getenv("TWILIO_AUTH_TOKEN"),
+		TwilioNumber:            os.Getenv("TWILIO_NUMBER"),
+		TwilioContentSID:        os.Getenv("TWILIO_CONTENT_SID"),
 		AvailableAdminPhoneNumbers: strings.Split(os.Getenv("AVAILABLE_ADMIN_PHONE_NUMBERS"), ","),
-		MailchimpAPIKey:            os.Getenv("MAILCHIMP_API_KEY"),
-		MailchimpListID:            os.Getenv("MAILCHIMP_LIST_ID"),
-		AdminEmail:                 os.Getenv("ADMIN_EMAIL"),
+		MailchimpAPIKey:         os.Getenv("MAILCHIMP_API_KEY"),
+		MailchimpListID:         os.Getenv("MAILCHIMP_LIST_ID"),
+		AdminEmail:              os.Getenv("ADMIN_EMAIL"),
 	}
 
 	// Validate required config values
 	required := []string{
-		"DB_HOST",
-		"DB_PORT",
-		"DB_USER",
-		"DB_PASSWORD",
-		"DB_NAME",
+		"MONGODB_URI",
+		"MONGODB_DATABASE",
 		"JWT_SECRET",
 		"TWILIO_ACCOUNT_SID",
 		"TWILIO_AUTH_TOKEN",
@@ -93,23 +89,6 @@ func LoadConfig() (*Config, error) {
 }
 
 func NewDB(config *Config) (*sql.DB, error) {
-	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		config.DBHost,
-		config.DBPort,
-		config.DBUser,
-		config.DBPassword,
-		config.DBName,
-	)
-
-	db, err := sql.Open("postgres", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := db.Ping(); err != nil {
-		return nil, err
-	}
-
-	return db, nil
+	// MongoDB doesn't use sql.DB, this function will be replaced with MongoDB client initialization
+	return nil, fmt.Errorf("MongoDB client initialization not implemented yet")
 }

@@ -3,11 +3,8 @@ package handlers
 import (
 	"chanterelle/internal/config"
 	"chanterelle/internal/services"
-	"fmt"
 	"net/http"
-	"strings"
 
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 )
@@ -18,12 +15,15 @@ type VerificationHandler struct {
 }
 
 func NewVerificationHandler(verificationService *services.VerificationService, config *config.Config) *VerificationHandler {
-	return &VerificationHandler{verificationService: verificationService, config: config}
+	return &VerificationHandler{
+		verificationService: verificationService,
+		config:              config,
+	}
 }
 
 func (h *VerificationHandler) SendVerification(c *gin.Context) {
 	var req struct {
-		PhoneNumber string `json:"phoneNumber" validate:"required,e164"`
+		Email string `json:"email" binding:"required,email"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -36,29 +36,33 @@ func (h *VerificationHandler) SendVerification(c *gin.Context) {
 		return
 	}
 
-	if !isValidPhoneNumber(req.PhoneNumber) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format. Must be in E.164 format (e.g., +18025551234)"})
+	// Only generate code for admin email
+	if req.Email != h.config.AdminEmail {
+		// Return success regardless of email
+		c.JSON(http.StatusOK, gin.H{
+			"message": "If the email was valid, you'll receive a verification code",
+		})
 		return
 	}
 
-	if !h.verificationService.IsValidAdminPhoneNumber(req.PhoneNumber) {
-		c.JSON(http.StatusOK, gin.H{"token": "Unauthorized"})
-		return
-	}
-
-	_, err := h.verificationService.GenerateVerificationCode(req.PhoneNumber)
+	code, err := h.verificationService.CreateVerificationCode(c.Request.Context(), req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Verification code sent successfully"})
+	// Store the code in the session for verification
+	c.SetCookie("verification_code", code, 300, "/", "", false, true)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "If the email was valid, you'll receive a verification code",
+	})
 }
 
 func (h *VerificationHandler) VerifyCode(c *gin.Context) {
 	var req struct {
-		PhoneNumber string `json:"phoneNumber" validate:"required,e164"`
-		Code        string `json:"code" validate:"required,len=6"`
+		Email string `json:"email" binding:"required,email"`
+		Code  string `json:"code" binding:"required,len=6"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -71,71 +75,54 @@ func (h *VerificationHandler) VerifyCode(c *gin.Context) {
 		return
 	}
 
-	if !isValidPhoneNumber(req.PhoneNumber) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid phone number format. Must be in E.164 format (e.g., +18025551234)"})
+	// Only accept verification for admin email
+	if req.Email != h.config.AdminEmail {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid email"})
 		return
 	}
 
-	token, err := h.verificationService.VerifyCode(req.PhoneNumber, req.Code)
+	// Get the stored code from the cookie
+	storedCode, err := c.Cookie("verification_code")
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid verification code"})
+		c.JSON(http.StatusForbidden, gin.H{"error": "No verification code found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	// Verify the code
+	if req.Code != storedCode {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Invalid verification code"})
+		return
+	}
+
+	// Clear the cookie after successful verification
+	c.SetCookie("verification_code", "", -1, "/", "", false, true)
+
+	// Set the verified email header for subsequent requests
+	c.Writer.Header().Set("X-Verified-Email", req.Email)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Verification successful",
+	})
 }
 
 func (h *VerificationHandler) JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		tokenString := c.GetHeader("Authorization")
-		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+		email := c.GetHeader("X-Verified-Email")
+		if email == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 			c.Abort()
 			return
 		}
 
-		if !strings.HasPrefix(tokenString, "Bearer ") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format. Expected 'Bearer <token>'"})
+		// Verify that the email is the admin email
+		if email != h.config.AdminEmail {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid email"})
 			c.Abort()
 			return
 		}
 
-		tokenString = tokenString[7:] // Remove "Bearer " prefix
-
-		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-			}
-			return []byte(h.config.JWTSecret), nil
-		})
-
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token format"})
-			c.Abort()
-			return
-		}
-
-		if !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token expired or invalid"})
-			c.Abort()
-			return
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token claims"})
-			c.Abort()
-			return
-		}
-
-		// Store phone number in context for later use
-		phoneNumber := claims["phone_number"].(string)
-		c.Set("phone_number", phoneNumber)
-
+		// Store email in context for use by other handlers
+		c.Set("email", email)
 		c.Next()
 	}
-}
-
-func isValidPhoneNumber(phoneNumber string) bool {
-	return strings.HasPrefix(phoneNumber, "+") && len(phoneNumber) >= 10
 }

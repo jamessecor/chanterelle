@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, Box, TextField, Button, Typography } from '@mui/material';
+import { Modal, Box, TextField, Button, Typography, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+
+interface PhoneInputModalProps {
+  open: boolean;
+  onClose: () => void;
+}
 
 const style = {
   position: 'absolute' as 'absolute',
@@ -15,21 +20,24 @@ const style = {
   borderRadius: 2,
 };
 
-interface PhoneInputModalProps {
-  open: boolean;
-  onClose: () => void;
-}
-
 const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
   const navigate = useNavigate();
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
 
   const handleSendVerification = async () => {
     setError('');
     try {
-      localStorage.setItem('adminPhoneNumber', phoneNumber);
-      const response = await axios.post('http://localhost:8080/api/send-verification', { phoneNumber });
+      localStorage.setItem('adminEmail', email);
+      const response = await axios.post(
+        'http://localhost:8080/api/send-verification',
+        { email },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
       if (response.status === 200) {
         navigate('/verify');
       }
@@ -47,17 +55,19 @@ const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
     >
       <Box sx={style}>
         <Typography id="phone-modal-title" variant="h6" component="h2" gutterBottom>
-          Enter Phone Number
+          Enter Admin Email
         </Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <TextField
           fullWidth
-          label="Phone Number"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
+          label="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           error={!!error}
           helperText={error}
           sx={{ mb: 2 }}
-          placeholder="e.g., +18025551234"
+          placeholder="Enter your email"
+          type="email"
         />
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           <Button onClick={onClose} variant="outlined">
@@ -66,7 +76,6 @@ const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
           <Button
             onClick={handleSendVerification}
             variant="contained"
-            disabled={!phoneNumber.startsWith('+1') || phoneNumber.length !== 12}
           >
             Send Verification
           </Button>
