@@ -79,7 +79,7 @@ func main() {
 	r.POST("/verify-code", handlers.VerifyCode)
 
 	// Protected routes
-	authGroup := r.Group("/auth")
+	authGroup := r.Group("")
 	authGroup.Use(handlers.JWTAuth())
 
 	// Get all contacts
