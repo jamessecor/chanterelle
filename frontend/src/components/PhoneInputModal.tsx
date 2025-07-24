@@ -30,7 +30,7 @@ const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
     try {
       localStorage.setItem('adminEmail', email);
       const response = await axios.post(
-        'http://localhost:8080/api/send-verification',
+        `${import.meta.env.VITE_API_BASE_ADDRESS}/api/send-verification`,
         { email },
         {
           headers: {

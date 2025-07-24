@@ -4,18 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 interface Contact {
-  id: number;
-  name: string;
-  email: string;
-  message: string;
-  created_at: string;
+  ID: number;
+  Name: string;
+  Email: string;
+  Message: string;
+  CreatedAt: string;
 }
 
 const AdminPage = () => {
   const navigate = useNavigate();
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState(null);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const token = localStorage.getItem('token');
@@ -27,15 +27,15 @@ const AdminPage = () => {
     const fetchContacts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:8080/api/contacts', {
+        const response = await axios.get<Contact[]>(`${import.meta.env.VITE_API_BASE_ADDRESS}/api/contacts`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
-        setContacts(response.data.contacts ?? []);
+        setContacts(response.data ?? []);
       } catch (error) {
-        console.error('Error fetching contacts:', error);
-        setError(error.message);
+        console.error('Error fetching contacts:', error as Error);
+        setError((error as Error).message);
       } finally {
         setLoading(false);
       }
@@ -84,11 +84,11 @@ const AdminPage = () => {
             </TableHead>
             <TableBody>
               {contacts.map((contact: Contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell>{contact.name}</TableCell>
-                  <TableCell>{contact.email}</TableCell>
-                  <TableCell>{contact.message}</TableCell>
-                  <TableCell>{new Date(contact.created_at).toLocaleString()}</TableCell>
+                <TableRow key={contact.ID}>
+                  <TableCell>{contact.Name}</TableCell>
+                  <TableCell>{contact.Email}</TableCell>
+                  <TableCell>{contact.Message}</TableCell>
+                  <TableCell>{new Date(contact.CreatedAt).toLocaleString()}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

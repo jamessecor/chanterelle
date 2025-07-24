@@ -17,7 +17,7 @@ const VerificationPage = () => {
 
   const handleVerify = async () => {
     setError('');
-    
+
     // Validate code format
     if (!/^[0-9]{6}$/.test(code)) {
       setError('Verification code must be 6 digits');
@@ -31,7 +31,7 @@ const VerificationPage = () => {
         return;
       }
 
-      const response = await axios.post('http://localhost:8080/api/verify-code', {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_ADDRESS}/api/verify-code`, {
         email,
         code: code
       });

@@ -5,8 +5,7 @@ import {
   Container,
   TextField,
   Typography,
-  Alert,
-  InputAdornment,
+  Alert
 } from '@mui/material';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -47,15 +46,13 @@ const ContactForm = () => {
 
   const onSubmit = async (data: ContactFormInputs) => {
     try {
-      const response = await axios.post('http://localhost:8080/api/contacts', data);
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_ADDRESS}/api/contacts`, data);
       if (response.status === 201) {
-        // TODO: send message that a new contact was added
-        // axios.post('http://localhost:8080/api/notify', data);
         setSuccess(response.data.message || 'Your message has been sent successfully!');
         reset();
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'An error occurred');
+      setError((err as Error).message || 'An error occurred');
     }
   };
 
@@ -83,51 +80,54 @@ const ContactForm = () => {
             {error}
           </Alert>
         )}
+        {!success
+          ? (
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <TextField
+                fullWidth
+                id="name"
+                label="Name"
+                {...register('name')}
+                error={!!errors.name}
+                helperText={errors.name?.message}
+                sx={{ mb: 2 }}
+              />
 
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <TextField
-            fullWidth
-            id="name"
-            label="Name"
-            {...register('name')}
-            error={!!errors.name}
-            helperText={errors.name?.message}
-            sx={{ mb: 2 }}
-          />
+              <TextField
+                fullWidth
+                id="email"
+                label="Email"
+                type="email"
+                {...register('email')}
+                error={!!errors.email}
+                helperText={errors.email?.message}
+                sx={{ mb: 2 }}
+              />
 
-          <TextField
-            fullWidth
-            id="email"
-            label="Email"
-            type="email"
-            {...register('email')}
-            error={!!errors.email}
-            helperText={errors.email?.message}
-            sx={{ mb: 2 }}
-          />
+              <TextField
+                fullWidth
+                id="message"
+                label="Message"
+                multiline
+                rows={4}
+                {...register('message')}
+                error={!!errors.message}
+                helperText={errors.message?.message}
+                sx={{ mb: 2 }}
+              />
 
-          <TextField
-            fullWidth
-            id="message"
-            label="Message"
-            multiline
-            rows={4}
-            {...register('message')}
-            error={!!errors.message}
-            helperText={errors.message?.message}
-            sx={{ mb: 2 }}
-          />
-
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            fullWidth
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Sending...' : 'Send Message'}
-          </Button>
-        </form>
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                fullWidth
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Sending...' : 'Send Message'}
+              </Button>
+            </form>
+          )
+          : null}
       </Box>
     </Container>
   );
