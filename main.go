@@ -85,8 +85,13 @@ func main() {
 	r.GET("/contacts", handlers.GetContacts)
 
 	// Start server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = fmt.Sprintf("%d", cfg.Port)
+	}
+
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", cfg.Port),
+		Addr:    fmt.Sprintf(":%s", port),
 		Handler: router,
 	}
 

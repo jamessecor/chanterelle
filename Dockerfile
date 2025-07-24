@@ -18,12 +18,16 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o server .
 # Final stage
 FROM alpine:3.19
 
+# Install tini for proper signal handling
+RUN apk add --no-cache tini
+ENTRYPOINT ["/sbin/tini", "--"]
+
 WORKDIR /app
 
 # Copy the server binary
 COPY --from=builder /app/server .
 
-# Expose the port the app runs on
+# Expose the port (Cloud Run ignores this but it's good practice)
 EXPOSE 8080
 
 # Command to run the executable
