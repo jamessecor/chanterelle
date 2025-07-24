@@ -79,10 +79,11 @@ func main() {
 	r.POST("/verify-code", handlers.VerifyCode)
 
 	// Protected routes
-	r.Use(handlers.JWTAuth())
+	authGroup := r.Group("/auth")
+	authGroup.Use(handlers.JWTAuth())
 
 	// Get all contacts
-	r.GET("/contacts", handlers.GetContacts)
+	authGroup.GET("/contacts", handlers.GetContacts)
 
 	// Start server
 	port := os.Getenv("PORT")
