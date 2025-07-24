@@ -18,6 +18,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o server .
 # Final stage
 FROM alpine:3.19
 
+ENV PORT=8080
+ENV GIN_MODE=release
+
 # Install tini for proper signal handling
 RUN apk add --no-cache tini
 ENTRYPOINT ["/sbin/tini", "--"]
