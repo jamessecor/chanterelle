@@ -44,8 +44,10 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	// Try to load .env from root directory
-	if err := godotenv.Load(".env"); err != nil {
-		return nil, fmt.Errorf("error loading .env file: %v", err)
+	if os.Getenv("ENV") == "development" {
+		if err := godotenv.Load(".env"); err != nil {
+			return nil, fmt.Errorf("error loading .env file: %v", err)
+		}
 	}
 
 	config := &Config{
