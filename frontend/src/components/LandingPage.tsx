@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Container, Box, Typography, CssBaseline, Link } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import ContactForm from './ContactForm';
+import imgUrl from '../../assets/chanterelle-logo.png';
 
 const theme = createTheme({
   palette: {
@@ -19,6 +20,11 @@ const theme = createTheme({
 });
 
 const LandingPage = () => {
+  useEffect(() => {
+    const logoObject = document.getElementById('logoImage');
+    logoObject?.setAttribute('src', imgUrl);
+  }, [imgUrl]);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -34,7 +40,7 @@ const LandingPage = () => {
         <Container maxWidth="sm" sx={{ textAlign: 'center', width: '100%' }}>
           <Box sx={{ textAlign: 'center', width: '100%' }}>
             <Box sx={{ m: 3, borderRadius: '40px', background: theme.palette.background.paper }}>
-              <img src="/assets/chanterelle-logo.png" alt="Chanterelle Band Logo" style={{ maxWidth: '300px', height: 'auto', marginBottom: '1rem' }} />
+              <img id="logoImage" alt="Chanterelle Band Logo" style={{ maxWidth: '300px', height: 'auto', marginBottom: '1rem' }} />
             </Box>
             <Typography variant="h4" component="h1" gutterBottom align="center">
               A band based in Central Vermont
