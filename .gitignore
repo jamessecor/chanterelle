@@ -6,4 +6,4 @@ frontend/.env
 internal/services/.env
 
 go.sum
-go.mod
+# go.mod
