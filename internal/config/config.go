@@ -24,6 +24,7 @@ func GetConfig() *Config {
 }
 
 type Config struct {
+	Port          int
 	MongoURI      string
 	MongoDatabase string
 	JWTSecret     string
@@ -48,19 +49,20 @@ func LoadConfig() (*Config, error) {
 	}
 
 	config := &Config{
-		MongoURI:                 os.Getenv("MONGODB_URI"),
-		MongoDatabase:           os.Getenv("MONGODB_DATABASE"),
-		JWTSecret:               os.Getenv("JWT_SECRET"),
-		VerificationCodeLength:  6,
-		VerificationCodeExpiry:  15 * time.Minute,
-		TwilioAccountSID:        os.Getenv("TWILIO_ACCOUNT_SID"),
-		TwilioAuthToken:         os.Getenv("TWILIO_AUTH_TOKEN"),
-		TwilioNumber:            os.Getenv("TWILIO_NUMBER"),
-		TwilioContentSID:        os.Getenv("TWILIO_CONTENT_SID"),
+		Port:                       8080,
+		MongoURI:                   os.Getenv("MONGODB_URI"),
+		MongoDatabase:              os.Getenv("MONGODB_DATABASE"),
+		JWTSecret:                  os.Getenv("JWT_SECRET"),
+		VerificationCodeLength:     6,
+		VerificationCodeExpiry:     15 * time.Minute,
+		TwilioAccountSID:           os.Getenv("TWILIO_ACCOUNT_SID"),
+		TwilioAuthToken:            os.Getenv("TWILIO_AUTH_TOKEN"),
+		TwilioNumber:               os.Getenv("TWILIO_NUMBER"),
+		TwilioContentSID:           os.Getenv("TWILIO_CONTENT_SID"),
 		AvailableAdminPhoneNumbers: strings.Split(os.Getenv("AVAILABLE_ADMIN_PHONE_NUMBERS"), ","),
-		MailchimpAPIKey:         os.Getenv("MAILCHIMP_API_KEY"),
-		MailchimpListID:         os.Getenv("MAILCHIMP_LIST_ID"),
-		AdminEmail:              os.Getenv("ADMIN_EMAIL"),
+		MailchimpAPIKey:            os.Getenv("MAILCHIMP_API_KEY"),
+		MailchimpListID:            os.Getenv("MAILCHIMP_LIST_ID"),
+		AdminEmail:                 os.Getenv("ADMIN_EMAIL"),
 	}
 
 	// Validate required config values

@@ -5,6 +5,7 @@ import (
 	"chanterelle/internal/repositories"
 	"chanterelle/internal/services"
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -85,7 +86,7 @@ func main() {
 
 	// Start server
 	server := &http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", cfg.Port),
 		Handler: router,
 	}
 
