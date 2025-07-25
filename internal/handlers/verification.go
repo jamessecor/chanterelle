@@ -4,9 +4,11 @@ import (
 	"chanterelle/internal/config"
 	"chanterelle/internal/services"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/dgrijalva/jwt-go"
 )
 
 type VerificationHandler struct {
@@ -97,12 +99,34 @@ func (h *VerificationHandler) VerifyCode(c *gin.Context) {
 	// Clear the cookie after successful verification
 	c.SetCookie("verification_code", "", -1, "/", "", false, true)
 
-	// Set the verified email header for subsequent requests
+	// Generate JWT token
+	token, err := h.generateToken(req.Email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
 	c.Writer.Header().Set("X-Verified-Email", req.Email)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Verification successful",
+		"token":   token,
 	})
+}
+
+// generateToken creates a new JWT token for the given email
+func (h *VerificationHandler) generateToken(email string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": email,
+		"exp":   time.Now().Add(24 * time.Hour).Unix(), // Token expires in 24 hours
+	})
+
+	tokenString, err := token.SignedString([]byte(h.config.JWTSecret))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }
 
 func (h *VerificationHandler) JWTAuth() gin.HandlerFunc {

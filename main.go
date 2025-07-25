@@ -54,10 +54,11 @@ func main() {
 	contactRepo := repositories.NewMongoContactRepository(db)
 	verificationRepo := repositories.NewMongoVerificationRepository(db)
 	contactService := services.NewContactService(contactRepo)
+	notificationService := services.NewNotificationService(cfg)
 	verificationService := services.NewVerificationService(cfg, verificationRepo)
 
 	// Initialize handlers
-	handlers := handlers.NewHandlers(contactService, verificationService, cfg)
+	handlers := handlers.NewHandlers(contactService, notificationService, verificationService, cfg)
 
 	// Set up router
 	router := gin.Default()

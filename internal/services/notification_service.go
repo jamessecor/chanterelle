@@ -31,6 +31,7 @@ func (s *NotificationService) AddToMailchimp(contact *models.Contact) error {
 	// Prepare Mailchimp subscription data
 	data := map[string]interface{}{
 		"email_address": contact.Email,
+		"name":          contact.Name,
 		"status":        "subscribed",
 	}
 

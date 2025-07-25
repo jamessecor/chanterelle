@@ -10,18 +10,21 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"chanterelle/internal/config"
+	"chanterelle/internal/models"
 	"chanterelle/internal/services"
 )
 
 type Handlers struct {
 	contactService      *services.ContactService
+	notificationService *services.NotificationService
 	verificationService *services.VerificationService
 	config              *config.Config
 }
 
-func NewHandlers(contactService *services.ContactService, verificationService *services.VerificationService, config *config.Config) *Handlers {
+func NewHandlers(contactService *services.ContactService, notificationService *services.NotificationService, verificationService *services.VerificationService, config *config.Config) *Handlers {
 	return &Handlers{
 		contactService:      contactService,
+		notificationService: notificationService,
 		verificationService: verificationService,
 		config:              config,
 	}
@@ -40,6 +43,14 @@ func (h *Handlers) CreateContact(c *gin.Context) {
 	}
 
 	if err := h.contactService.CreateContact(c.Request.Context(), contact.Name, contact.Email, contact.Message); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.notificationService.AddToMailchimp(&models.Contact{
+		Name:  contact.Name,
+		Email: contact.Email,
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

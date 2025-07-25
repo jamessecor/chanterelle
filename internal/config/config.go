@@ -3,6 +3,7 @@ package config
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -44,10 +45,10 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	// Try to load .env from root directory
-	if os.Getenv("ENV") == "development" {
-		if err := godotenv.Load(".env"); err != nil {
-			return nil, fmt.Errorf("error loading .env file: %v", err)
-		}
+	log.Println("Loading config from .env file...")
+	if err := godotenv.Load(".env"); err != nil {
+		log.Println(fmt.Errorf("error loading .env file: %v", err))
+		log.Println("Using system config...")
 	}
 
 	config := &Config{
