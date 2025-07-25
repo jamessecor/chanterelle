@@ -71,6 +71,14 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
+	router.GET("/ready", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "OK"})
+	})
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "OK"})
+	})
+
 	// Public routes
 	r := router.Group("/api")
 	// Contact creation (public)
