@@ -3,6 +3,7 @@ package handlers
 import (
 	"chanterelle/internal/config"
 	"chanterelle/internal/services"
+	"log"
 	"net/http"
 	"time"
 
@@ -13,13 +14,15 @@ import (
 
 type VerificationHandler struct {
 	verificationService *services.VerificationService
-	config              *config.Config
+	notificationService *services.NotificationService
+	config             *config.Config
 }
 
-func NewVerificationHandler(verificationService *services.VerificationService, config *config.Config) *VerificationHandler {
+func NewVerificationHandler(verificationService *services.VerificationService, notificationService *services.NotificationService, config *config.Config) *VerificationHandler {
 	return &VerificationHandler{
 		verificationService: verificationService,
-		config:              config,
+		notificationService: notificationService,
+		config:             config,
 	}
 }
 
@@ -50,6 +53,13 @@ func (h *VerificationHandler) SendVerification(c *gin.Context) {
 	code, err := h.verificationService.CreateVerificationCode(c.Request.Context(), req.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Send verification code via EmailJS
+	if err := h.notificationService.SendVerificationCode(req.Email, code); err != nil {
+		log.Printf("Failed to send verification code via EmailJS: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send verification code"})
 		return
 	}
 

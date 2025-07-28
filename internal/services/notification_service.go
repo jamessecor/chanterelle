@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"chanterelle/internal/config"
 	"chanterelle/internal/models"
 	"encoding/base64"
@@ -10,17 +11,39 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type NotificationService struct {
-	cfg *config.Config
+	cfg    *config.Config
+	client *http.Client
+}
+
+type emailJSParams struct {
+	ToName      string `json:"to_name"`
+	Destination string `json:"destination"`
+	Firstname   string `json:"firstname"`
+	Lastname    string `json:"lastname"`
+	Email       string `json:"email"`
+	Message     string `json:"message"`
+}
+
+type emailJSRequest struct {
+	ServiceID      string        `json:"service_id"`
+	TemplateID     string        `json:"template_id"`
+	UserID         string        `json:"user_id"`
+	AccessToken    string        `json:"accessToken"`
+	TemplateParams emailJSParams `json:"template_params"`
 }
 
 // SendAdminNotification sends an email notification to admin using Mailchimp Transactional API
 // Note: Requires setting ADMIN_EMAIL environment variable
 
 func NewNotificationService(cfg *config.Config) *NotificationService {
-	return &NotificationService{cfg: cfg}
+	return &NotificationService{
+		cfg:    cfg,
+		client: &http.Client{Timeout: 10 * time.Second},
+	}
 }
 
 func (s *NotificationService) AddToMailchimp(contact *models.Contact) error {
@@ -42,7 +65,6 @@ func (s *NotificationService) AddToMailchimp(contact *models.Contact) error {
 	}
 
 	// Create request
-	log.Printf("Request body: %s", string(jsonData))
 	req, err := http.NewRequest("POST", endpoint, strings.NewReader(string(jsonData)))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
@@ -74,8 +96,87 @@ func (s *NotificationService) AddToMailchimp(contact *models.Contact) error {
 	return nil
 }
 
+func (s *NotificationService) sendEmailJS(params emailJSParams) error {
+	if s.cfg.EmailJSServiceID == "" || s.cfg.EmailJSTemplateID == "" || s.cfg.EmailJSUserID == "" {
+		return fmt.Errorf("emailjs configuration is not complete")
+	}
+
+	reqBody := emailJSRequest{
+		ServiceID:      s.cfg.EmailJSServiceID,
+		TemplateID:     s.cfg.EmailJSTemplateID,
+		UserID:         s.cfg.EmailJSUserID,
+		AccessToken:    s.cfg.EmailJSAccessToken,
+		TemplateParams: params,
+	}
+
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return fmt.Errorf("failed to marshal emailjs request: %v", err)
+	}
+
+	// Send request to EmailJS
+	resp, err := s.client.Post(
+		"https://api.emailjs.com/api/v1.0/email/send",
+		"application/json",
+		bytes.NewBuffer(jsonData),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to send email via emailjs: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("emailjs API returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
+func (s *NotificationService) SendVerificationCode(email, code string) error {
+	log.Println("Sending verification code to", email)
+	params := emailJSParams{
+		ToName:      "Chanterelle member",
+		Destination: fmt.Sprintf("Your verification code is: %s", code),
+		Firstname:   "",
+		Lastname:    "",
+		Email:       email,
+		Message:     "Please use this code to verify your admin access.",
+	}
+
+	return s.sendEmailJS(params)
+}
+
+func (s *NotificationService) SendNewContactNotification(contact *models.Contact) error {
+	// First name and last name handling (assuming Name is in format "First Last")
+	nameParts := strings.Fields(contact.Name)
+	firstName := contact.Name
+	lastName := ""
+	if len(nameParts) > 1 {
+		firstName = strings.Join(nameParts[:len(nameParts)-1], " ")
+		lastName = nameParts[len(nameParts)-1]
+	}
+
+	params := emailJSParams{
+		ToName:      "Chanterelle member",
+		Destination: "New Contact Form Submission",
+		Firstname:   firstName,
+		Lastname:    lastName,
+		Email:       contact.Email,
+		Message:     contact.Message,
+	}
+
+	return s.sendEmailJS(params)
+}
+
+// Keeping the old Mailchimp implementation for backward compatibility
 func (s *NotificationService) SendAdminNotification(contact *models.Contact) error {
-	// Mailchimp Transactional API endpoint
+	// First try EmailJS if configured
+	if s.cfg.EmailJSServiceID != "" && s.cfg.EmailJSTemplateID != "" && s.cfg.EmailJSUserID != "" {
+		return s.SendNewContactNotification(contact)
+	}
+
+	// Fall back to Mailchimp
 	endpoint := "https://mandrillapp.com/api/1.0/messages/send.json"
 
 	// Prepare message data
@@ -101,8 +202,6 @@ func (s *NotificationService) SendAdminNotification(contact *models.Contact) err
 			},
 		},
 	}
-	log.Println(s.cfg.AdminEmail)
-	log.Println(data)
 
 	// Convert to JSON
 	jsonData, err := json.Marshal(data)

@@ -41,6 +41,12 @@ type Config struct {
 	MailchimpAPIKey            string
 	MailchimpListID            string
 	AdminEmail                 string
+
+	// EmailJS configuration
+	EmailJSServiceID   string
+	EmailJSTemplateID  string
+	EmailJSUserID      string
+	EmailJSAccessToken string
 }
 
 func LoadConfig() (*Config, error) {
@@ -66,6 +72,10 @@ func LoadConfig() (*Config, error) {
 		MailchimpAPIKey:            os.Getenv("MAILCHIMP_API_KEY"),
 		MailchimpListID:            os.Getenv("MAILCHIMP_LIST_ID"),
 		AdminEmail:                 os.Getenv("ADMIN_EMAIL"),
+		EmailJSServiceID:           os.Getenv("EMAILJS_SERVICE_ID"),
+		EmailJSTemplateID:          os.Getenv("EMAILJS_TEMPLATE_ID"),
+		EmailJSUserID:              os.Getenv("EMAILJS_USER_ID"),
+		EmailJSAccessToken:         os.Getenv("EMAILJS_ACCESS_TOKEN"),
 	}
 
 	// Validate required config values
@@ -81,6 +91,10 @@ func LoadConfig() (*Config, error) {
 		"MAILCHIMP_API_KEY",
 		"MAILCHIMP_LIST_ID",
 		"ADMIN_EMAIL",
+		"EMAILJS_SERVICE_ID",
+		"EMAILJS_TEMPLATE_ID",
+		"EMAILJS_USER_ID",
+		"EMAILJS_ACCESS_TOKEN",
 	}
 
 	for _, key := range required {
