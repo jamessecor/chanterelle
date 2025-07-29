@@ -54,7 +54,7 @@ func LoadConfig() (*Config, error) {
 	log.Println("Loading config from .env file...")
 	if err := godotenv.Load(".env"); err != nil {
 		log.Println("error loading .env file: %v", err)
-		log.Println("Using system config...")
+		log.Println("Warning: we will attempt to use system config...")
 	}
 
 	config := &Config{
@@ -76,27 +76,6 @@ func LoadConfig() (*Config, error) {
 		EmailJSTemplateID:          os.Getenv("EMAILJS_TEMPLATE_ID"),
 		EmailJSUserID:              os.Getenv("EMAILJS_USER_ID"),
 		EmailJSAccessToken:         os.Getenv("EMAILJS_ACCESS_TOKEN"),
-	}
-
-	// Validate required config values
-	required := []string{
-		"MONGODB_URI",
-		"MONGODB_DATABASE",
-		"JWT_SECRET",
-		"MAILCHIMP_API_KEY",
-		"MAILCHIMP_LIST_ID",
-		"ADMIN_EMAIL",
-		"EMAILJS_SERVICE_ID",
-		"EMAILJS_TEMPLATE_ID",
-		"EMAILJS_USER_ID",
-		"EMAILJS_ACCESS_TOKEN",
-	}
-
-	for _, key := range required {
-		value := os.Getenv(key)
-		if value == "" {
-			return nil, fmt.Errorf("required environment variable %s is not set", key)
-		}
 	}
 
 	return config, nil
