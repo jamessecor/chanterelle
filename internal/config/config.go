@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -33,14 +32,9 @@ type Config struct {
 	VerificationCodeLength int
 	VerificationCodeExpiry time.Duration
 
-	TwilioAccountSID           string
-	TwilioAuthToken            string
-	TwilioNumber               string
-	TwilioContentSID           string
-	AvailableAdminPhoneNumbers []string
-	MailchimpAPIKey            string
-	MailchimpListID            string
-	AdminEmail                 string
+	MailchimpAPIKey string
+	MailchimpListID string
+	AdminEmail      string
 
 	// EmailJS configuration
 	EmailJSServiceID   string
@@ -58,24 +52,19 @@ func LoadConfig() (*Config, error) {
 	}
 
 	config := &Config{
-		Port:                       8080,
-		MongoURI:                   os.Getenv("MONGODB_URI"),
-		MongoDatabase:              os.Getenv("MONGODB_DATABASE"),
-		JWTSecret:                  os.Getenv("JWT_SECRET"),
-		VerificationCodeLength:     6,
-		VerificationCodeExpiry:     15 * time.Minute,
-		TwilioAccountSID:           os.Getenv("TWILIO_ACCOUNT_SID"),
-		TwilioAuthToken:            os.Getenv("TWILIO_AUTH_TOKEN"),
-		TwilioNumber:               os.Getenv("TWILIO_NUMBER"),
-		TwilioContentSID:           os.Getenv("TWILIO_CONTENT_SID"),
-		AvailableAdminPhoneNumbers: strings.Split(os.Getenv("AVAILABLE_ADMIN_PHONE_NUMBERS"), ","),
-		MailchimpAPIKey:            os.Getenv("MAILCHIMP_API_KEY"),
-		MailchimpListID:            os.Getenv("MAILCHIMP_LIST_ID"),
-		AdminEmail:                 os.Getenv("ADMIN_EMAIL"),
-		EmailJSServiceID:           os.Getenv("EMAILJS_SERVICE_ID"),
-		EmailJSTemplateID:          os.Getenv("EMAILJS_TEMPLATE_ID"),
-		EmailJSUserID:              os.Getenv("EMAILJS_USER_ID"),
-		EmailJSAccessToken:         os.Getenv("EMAILJS_ACCESS_TOKEN"),
+		Port:                   8080,
+		MongoURI:               os.Getenv("MONGODB_URI"),
+		MongoDatabase:          os.Getenv("MONGODB_DATABASE"),
+		JWTSecret:              os.Getenv("JWT_SECRET"),
+		VerificationCodeLength: 6,
+		VerificationCodeExpiry: 15 * time.Minute,
+		MailchimpAPIKey:        os.Getenv("MAILCHIMP_API_KEY"),
+		MailchimpListID:        os.Getenv("MAILCHIMP_LIST_ID"),
+		AdminEmail:             os.Getenv("ADMIN_EMAIL"),
+		EmailJSServiceID:       os.Getenv("EMAILJS_SERVICE_ID"),
+		EmailJSTemplateID:      os.Getenv("EMAILJS_TEMPLATE_ID"),
+		EmailJSUserID:          os.Getenv("EMAILJS_USER_ID"),
+		EmailJSAccessToken:     os.Getenv("EMAILJS_ACCESS_TOKEN"),
 	}
 
 	return config, nil
