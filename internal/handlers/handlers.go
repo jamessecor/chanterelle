@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
@@ -253,10 +254,23 @@ func (h *Handlers) VerifyCode(c *gin.Context) {
 		return
 	}
 
+	// Generate JWT token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": req.Email,
+		"exp":   time.Now().Add(24 * time.Hour).Unix(), // Token expires in 24 hours
+	})
+
+	tokenString, err := token.SignedString([]byte(h.config.JWTSecret))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		return
+	}
+
 	// Set the verified email header for subsequent requests
 	c.Writer.Header().Set("X-Verified-Email", req.Email)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Verification successful",
+		"token":   tokenString,
 	})
 }

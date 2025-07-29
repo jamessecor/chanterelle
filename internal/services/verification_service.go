@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"crypto/rand"
-	"encoding/base32"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -25,16 +24,6 @@ func NewVerificationService(cfg *config.Config, repository repositories.Verifica
 		cfg:        cfg,
 		repository: repository,
 	}
-}
-
-// GenerateRandomCode generates a random alphanumeric code of specified length
-func (s *VerificationService) GenerateRandomCode() string {
-	bytes := make([]byte, s.cfg.VerificationCodeLength)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return ""
-	}
-	return base32.StdEncoding.EncodeToString(bytes)[:s.cfg.VerificationCodeLength]
 }
 
 func (s *VerificationService) CreateVerificationCode(ctx context.Context, email string) (string, error) {

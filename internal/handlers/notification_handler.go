@@ -34,7 +34,7 @@ func (h *NotificationHandler) NotifyAdmin(c *gin.Context) {
 	}
 
 	// Send admin notification
-	if err := h.notificationService.SendAdminNotification(&contact); err != nil {
+	if err := h.notificationService.SendNewContactNotification(&contact); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send admin notification"})
 		return
 	}
@@ -59,7 +59,7 @@ func (h *NotificationHandler) HandleContactSubmission(c *gin.Context) {
 	}
 
 	// Send admin notification
-	if err := h.notificationService.SendAdminNotification(&contact); err != nil {
+	if err := h.notificationService.SendNewContactNotification(&contact); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send admin notification"})
 		return
 	}

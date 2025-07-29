@@ -17,32 +17,47 @@ const AdminPage = () => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  const token = localStorage.getItem('token');
+
+  const fetchContacts = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get<Contact[]>(`${import.meta.env.VITE_API_BASE_ADDRESS}/api/contacts`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setContacts(response.data ?? []);
+    } catch (error) {
+      console.error('Error fetching contacts:', error as Error);
+      setError((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   React.useEffect(() => {
-    const token = localStorage.getItem('token');
     if (!token) {
       navigate('/');
       return;
     }
 
-    const fetchContacts = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get<Contact[]>(`${import.meta.env.VITE_API_BASE_ADDRESS}/api/contacts`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        setContacts(response.data ?? []);
-      } catch (error) {
-        console.error('Error fetching contacts:', error as Error);
-        setError((error as Error).message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchContacts();
-  }, [navigate]);
+  }, [navigate, token]);
+
+  const handleDeleteContact = async (id: number) => {
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_ADDRESS}/api/contacts/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      await fetchContacts();
+    } catch (error) {
+      console.error('Error deleting contact:', error as Error);
+      setError((error as Error).message);
+    }
+  };
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
@@ -80,6 +95,7 @@ const AdminPage = () => {
                 <TableCell>Email</TableCell>
                 <TableCell>Message</TableCell>
                 <TableCell>Created At</TableCell>
+                <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -89,6 +105,17 @@ const AdminPage = () => {
                   <TableCell>{contact.Email}</TableCell>
                   <TableCell>{contact.Message}</TableCell>
                   <TableCell>{new Date(contact.CreatedAt).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Button
+                      variant="outlined"
+                      color="secondary"
+                      onClick={() => {
+                        handleDeleteContact(contact.ID);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

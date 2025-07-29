@@ -93,6 +93,7 @@ func main() {
 
 	// Get all contacts
 	authGroup.GET("/contacts", handlers.GetContacts)
+	authGroup.DELETE("/contacts/:id", handlers.DeleteContact)
 
 	// Start server
 	port := os.Getenv("PORT")

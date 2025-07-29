@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Box, Typography, TextField, Button, Alert } from '@mui/material';
+import React, { useState, useEffect, useRef } from 'react';
+import { Container, Box, Typography, TextField, Button, Alert, Stack } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
@@ -10,10 +10,17 @@ const VerificationPage = () => {
 
   const [focusedIndex, setFocusedIndex] = useState(0);
 
+  const verifyButtonRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
+    if (code.length === 6) {
+      verifyButtonRef.current?.focus();
+      return;
+    }
+
     const input = document.getElementById(`code-input-${focusedIndex}`) as HTMLInputElement | null;
     input?.focus();
-  }, [focusedIndex]);
+  }, [focusedIndex, code]);
 
   const handleVerify = async () => {
     setError('');
@@ -52,9 +59,19 @@ const VerificationPage = () => {
     setCode(newCode.join(''));
   };
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData?.getData('text') || '';
+    if (pasted.length === 6) {
+      setCode(pasted);
+      // focus on the verify button using ref
+      verifyButtonRef.current?.focus();
+    }
+  };
+
   return (
     <Container maxWidth="sm">
-      <Box sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <Stack gap={1} sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <Button variant="contained" color="primary" onClick={() => navigate('/')}>
           Back to Home
         </Button>
@@ -78,6 +95,7 @@ const VerificationPage = () => {
                 }
               }}
               onFocus={() => setFocusedIndex(index)}
+              onPaste={handlePaste}
               inputProps={{ maxLength: 1 }}
               sx={{ flex: 1 }}
               type="text"
@@ -94,10 +112,11 @@ const VerificationPage = () => {
           onClick={handleVerify}
           disabled={code.length !== 6}
           fullWidth
+          ref={verifyButtonRef}
         >
           Verify
         </Button>
-      </Box>
+      </Stack>
     </Container>
   );
 };
