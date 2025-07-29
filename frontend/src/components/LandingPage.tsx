@@ -39,7 +39,7 @@ const LandingPage = () => {
       }}>
         <Container maxWidth="sm" sx={{ textAlign: 'center', width: '100%' }}>
           <Box sx={{ textAlign: 'center', width: '100%' }}>
-            <Box sx={{ m: 3, borderRadius: '40px', background: theme.palette.background.paper }}>
+            <Box sx={{ m: 3, borderRadius: {xs: '10px', md: '40px'}, background: theme.palette.background.paper }}>
               <img id="logoImage" alt="Chanterelle Band Logo" style={{ maxWidth: '300px', height: 'auto', marginBottom: '1rem' }} />
             </Box>
             <Typography variant="h4" component="h1" gutterBottom align="center">
