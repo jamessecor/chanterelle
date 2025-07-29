@@ -53,7 +53,7 @@ func LoadConfig() (*Config, error) {
 	// Try to load .env from root directory
 	log.Println("Loading config from .env file...")
 	if err := godotenv.Load(".env"); err != nil {
-		log.Println(fmt.Errorf("error loading .env file: %v", err))
+		log.Println("error loading .env file: %v", err)
 		log.Println("Using system config...")
 	}
 
@@ -83,11 +83,6 @@ func LoadConfig() (*Config, error) {
 		"MONGODB_URI",
 		"MONGODB_DATABASE",
 		"JWT_SECRET",
-		"TWILIO_ACCOUNT_SID",
-		"TWILIO_AUTH_TOKEN",
-		"TWILIO_NUMBER",
-		"TWILIO_CONTENT_SID",
-		"AVAILABLE_ADMIN_PHONE_NUMBERS",
 		"MAILCHIMP_API_KEY",
 		"MAILCHIMP_LIST_ID",
 		"ADMIN_EMAIL",
