@@ -3,7 +3,6 @@ package config
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -29,9 +28,11 @@ type Config struct {
 	MongoDatabase string
 	JWTSecret     string
 
+	// Verification settings
 	VerificationCodeLength int
 	VerificationCodeExpiry time.Duration
 
+	// Mailchimp configuration
 	MailchimpAPIKey string
 	MailchimpListID string
 	AdminEmail      string
@@ -44,30 +45,64 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
-	// Try to load .env from root directory
-	log.Println("Loading config from .env file...")
-	if err := godotenv.Load(".env"); err != nil {
-		log.Println("error loading .env file: %v", err)
-		log.Println("Warning: we will attempt to use system config...")
-	}
+	// Try to load .env from root directory (for local development only)
+	// In Cloud Run, we'll rely on environment variables being set directly
+	_ = godotenv.Load() // Ignore errors - will use system env if .env doesn't exist
 
 	config := &Config{
-		Port:                   8080,
-		MongoURI:               os.Getenv("MONGODB_URI"),
-		MongoDatabase:          os.Getenv("MONGODB_DATABASE"),
-		JWTSecret:              os.Getenv("JWT_SECRET"),
+		Port:                   getEnvAsInt("PORT", 8080),
+		MongoURI:               getEnv("MONGODB_URI", ""),
+		MongoDatabase:          getEnv("MONGODB_DATABASE", ""),
+		JWTSecret:              getEnv("JWT_SECRET", ""),
 		VerificationCodeLength: 6,
 		VerificationCodeExpiry: 15 * time.Minute,
-		MailchimpAPIKey:        os.Getenv("MAILCHIMP_API_KEY"),
-		MailchimpListID:        os.Getenv("MAILCHIMP_LIST_ID"),
-		AdminEmail:             os.Getenv("ADMIN_EMAIL"),
-		EmailJSServiceID:       os.Getenv("EMAILJS_SERVICE_ID"),
-		EmailJSTemplateID:      os.Getenv("EMAILJS_TEMPLATE_ID"),
-		EmailJSUserID:          os.Getenv("EMAILJS_USER_ID"),
-		EmailJSAccessToken:     os.Getenv("EMAILJS_ACCESS_TOKEN"),
+		MailchimpAPIKey:        getEnv("MAILCHIMP_API_KEY", ""),
+		MailchimpListID:        getEnv("MAILCHIMP_LIST_ID", ""),
+		AdminEmail:             getEnv("ADMIN_EMAIL", ""),
+		EmailJSServiceID:       getEnv("EMAILJS_SERVICE_ID", ""),
+		EmailJSTemplateID:      getEnv("EMAILJS_TEMPLATE_ID", ""),
+		EmailJSUserID:          getEnv("EMAILJS_USER_ID", ""),
+		EmailJSAccessToken:     getEnv("EMAILJS_ACCESS_TOKEN", ""),
+	}
+
+	// Validate required environment variables
+	required := map[string]string{
+		"MONGODB_URI":         config.MongoURI,
+		"MONGODB_DATABASE":    config.MongoDatabase,
+		"JWT_SECRET":          config.JWTSecret,
+		"ADMIN_EMAIL":         config.AdminEmail,
+		"EMAILJS_SERVICE_ID":  config.EmailJSServiceID,
+		"EMAILJS_TEMPLATE_ID": config.EmailJSTemplateID,
+		"EMAILJS_USER_ID":     config.EmailJSUserID,
+	}
+
+	for key, value := range required {
+		if value == "" {
+			return nil, fmt.Errorf("required environment variable %s is not set", key)
+		}
 	}
 
 	return config, nil
+}
+
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvAsInt(key string, defaultValue int) int {
+	valueStr := getEnv(key, "")
+	if valueStr == "" {
+		return defaultValue
+	}
+	var value int
+	_, err := fmt.Sscanf(valueStr, "%d", &value)
+	if err != nil {
+		return defaultValue
+	}
+	return value
 }
 
 func NewDB(config *Config) (*sql.DB, error) {
