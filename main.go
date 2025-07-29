@@ -26,10 +26,7 @@ var validate *validator.Validate
 
 func main() {
 	// Load configuration
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
+	cfg := config.GetConfig()
 
 	validate = validator.New()
 

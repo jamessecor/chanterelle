@@ -54,6 +54,12 @@ const VerificationPage = () => {
   };
 
   const updateCode = (index: number, value: string) => {
+    if (value.length === 6) {
+      setCode(value);
+      verifyButtonRef.current?.focus();
+      return;
+    }
+
     const newCode = code.split('');
     newCode[index] = value;
     setCode(newCode.join(''));
