@@ -3,7 +3,7 @@ import { Modal, Box, TextField, Button, Typography, Alert } from '@mui/material'
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-interface PhoneInputModalProps {
+interface EmailInputModalProps {
   open: boolean;
   onClose: () => void;
 }
@@ -20,7 +20,7 @@ const style = {
   borderRadius: 2,
 };
 
-const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
+const EmailInputModal = ({ open, onClose }: EmailInputModalProps) => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -50,11 +50,11 @@ const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
     <Modal
       open={open}
       onClose={onClose}
-      aria-labelledby="phone-modal-title"
-      aria-describedby="phone-modal-description"
+      aria-labelledby="email-modal-title"
+      aria-describedby="email-modal-description"
     >
       <Box sx={style}>
-        <Typography id="phone-modal-title" variant="h6" component="h2" gutterBottom>
+        <Typography id="email-modal-title" variant="h6" component="h2" gutterBottom>
           Enter Admin Email
         </Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -85,4 +85,4 @@ const PhoneInputModal = ({ open, onClose }: PhoneInputModalProps) => {
   );
 };
 
-export default PhoneInputModal;
+export default EmailInputModal;

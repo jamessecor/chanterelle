@@ -186,14 +186,12 @@ func (h *Handlers) SendVerification(c *gin.Context) {
 		Email string `json:"email" binding:"required,email"`
 	}
 
-	log.Println("Sending verification code to", req.Email)
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Println("Failed to bind JSON:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	log.Println("Admin email is", h.config.AdminEmail)
 	// Only generate code for admin email
 	if req.Email != h.config.AdminEmail {
 		// Return success regardless of email

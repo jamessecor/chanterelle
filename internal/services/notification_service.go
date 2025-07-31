@@ -97,7 +97,7 @@ func (s *NotificationService) AddToMailchimp(contact *models.Contact) error {
 }
 
 func (s *NotificationService) sendEmailJS(params emailJSParams) error {
-	if s.cfg.EmailJSServiceID == "" || s.cfg.EmailJSTemplateID == "" || s.cfg.EmailJSUserID == "" {
+	if s.cfg.EmailJSServiceID == "" || s.cfg.EmailJSTemplateID == "" || s.cfg.EmailJSUserID == "" || s.cfg.EmailJSAccessToken == "" {
 		return fmt.Errorf("emailjs configuration is not complete")
 	}
 
@@ -134,7 +134,6 @@ func (s *NotificationService) sendEmailJS(params emailJSParams) error {
 }
 
 func (s *NotificationService) SendVerificationCode(email, code string) error {
-	log.Println("Sending verification code to", email)
 	params := emailJSParams{
 		ToName:      "Chanterelle member",
 		Destination: fmt.Sprintf("Your verification code is: %s", code),

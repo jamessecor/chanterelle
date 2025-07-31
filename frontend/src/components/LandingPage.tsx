@@ -3,6 +3,7 @@ import { Container, Box, Typography, CssBaseline, Link } from '@mui/material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import ContactForm from './ContactForm';
 import imgUrl from '../../assets/chanterelle-logo.png';
+import LoginButton from './LoginButton';
 
 const theme = createTheme({
   palette: {
@@ -39,7 +40,7 @@ const LandingPage = () => {
       }}>
         <Container maxWidth="sm" sx={{ textAlign: 'center', width: '100%' }}>
           <Box sx={{ textAlign: 'center', width: '100%' }}>
-            <Box sx={{ m: 3, borderRadius: {xs: '10px', md: '40px'}, background: theme.palette.background.paper }}>
+            <Box sx={{ p: { xs: 0, md: 3 }, my: 3, borderRadius: { xs: '10px', md: '40px' }, background: theme.palette.background.paper }}>
               <img id="logoImage" alt="Chanterelle Band Logo" style={{ maxWidth: '300px', height: 'auto', marginBottom: '1rem' }} />
             </Box>
             <Typography variant="h4" component="h1" gutterBottom align="center">
@@ -54,9 +55,15 @@ const LandingPage = () => {
                 Bandcamp
               </Link>
             </Typography>
-            <Box sx={{ maxWidth: '500px', width: '100%', mt: 4 }}>
+            <Box sx={{ 
+              maxWidth: '500px', 
+              width: '100%', 
+              mt: 4,
+              mx: 'auto'  
+            }}>
               <ContactForm />
             </Box>
+            <LoginButton />
           </Box>
         </Container>
       </Box>

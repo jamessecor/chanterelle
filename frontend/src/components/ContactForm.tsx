@@ -119,7 +119,7 @@ const ContactForm = () => {
               <Button
                 type="submit"
                 variant="contained"
-                color="primary"
+                color="info"
                 fullWidth
                 disabled={isSubmitting}
               >

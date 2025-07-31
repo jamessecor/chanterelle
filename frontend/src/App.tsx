@@ -4,18 +4,12 @@ import LoginButton from './components/LoginButton';
 import VerificationPage from './components/VerificationPage';
 import AdminPage from './components/AdminPage';
 import LandingPage from './components/LandingPage';
-import ContactForm from './components/ContactForm';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={
-          <>
-            <LandingPage />
-            <LoginButton />
-          </>
-        } />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/verify" element={<VerificationPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="*" element={

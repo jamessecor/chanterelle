@@ -1,11 +1,9 @@
 import React from 'react';
-import { Button, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import PhoneInputModal from './PhoneInputModal';
+import { Button } from '@mui/material';
+import LockIcon from '@mui/icons-material/Lock';
+import EmailInputModal from './EmailInputModal';
 
 const LoginButton = () => {
-  const navigate = useNavigate();
   const [openModal, setOpenModal] = React.useState(false);
 
   const handleLogin = () => {
@@ -20,9 +18,9 @@ const LoginButton = () => {
         onClick={handleLogin}
         sx={{ mt: 2 }}
       >
-        Admin Login
+        <LockIcon />
       </Button>
-      <PhoneInputModal open={openModal} onClose={() => setOpenModal(false)} />
+      <EmailInputModal open={openModal} onClose={() => setOpenModal(false)} />
     </>
   );
 };
